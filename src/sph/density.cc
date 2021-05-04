@@ -501,56 +501,54 @@ void sph::density(int *list, int ntarget)
                 Terminate("P[target].getType() != 0");
 
               sph_particle_data *SphP = Tp->SphP;
+#ifndef PRESSURE_ENTROPY_SPH
               if(SphP[target].Density > 0)
+#else
+              if(SphP[target].PressureSphDensity > 0)
+#endif
                 {
 #ifdef WENDLAND_BIAS_CORRECTION
-                  SphP[target].Density -= get_density_bias(SphP[target].Hsml, Tp->P[target].getMass(), All.DesNumNgb);
+                  double bias = get_density_bias(SphP[target].Hsml, Tp->P[target].getMass(), All.DesNumNgb);
+                  SphP[target].Density -= bias;
+#ifdef PRESSURE_ENTROPY_SPH
+                  SphP[target].PressureSphDensity -= bias * SphP[target].EntropyToInvGammaPred;
 #endif
-                  SphP[target].DhsmlDensityFactor *= SphP[target].Hsml / (NUMDIMS * SphP[target].Density);
-                  if(SphP[target].DhsmlDensityFactor >
-                     -0.9) /* note: this would be -1 if only a single particle at zero lag is found */
-                    SphP[target].DhsmlDensityFactor = 1 / (1 + SphP[target].DhsmlDensityFactor);
+#endif
+                  /* note: this would be 0 if only a single particle at zero lag is found */
+                  if(SphP[target].DhsmlDensityFactor > 0)
+                    {
+#ifdef PRESSURE_ENTROPY_SPH
+                      SphP[target].DhsmlDerivedDensityFactor = 
+                      (NUMDIMS * SphP[target].PressureSphDensity - SphP[target].DhsmlDerivedDensityFactor) 
+                      / SphP[target].DhsmlDensityFactor / SphP[target].EntropyToInvGammaPred;
+                      if(SphP[target].DhsmlDerivedDensityFactor > 9.0) /* limiter for pathologocial particle configurations */
+                        SphP[target].DhsmlDerivedDensityFactor = 0.0;
+#endif                
+                      SphP[target].DhsmlDensityFactor = NUMDIMS * SphP[target].Density / SphP[target].DhsmlDensityFactor;
+                      if(SphP[target].DhsmlDensityFactor > 10.0) /* limiter for pathologocial particle configurations */
+                        SphP[target].DhsmlDensityFactor = 1.0;
+                    }
                   else
-                    SphP[target].DhsmlDensityFactor = 1;
+                    SphP[target].DhsmlDensityFactor = 1.0;
 
 #ifndef IMPROVED_VELOCITY_GRADIENTS
                   SphP[target].CurlVel = sqrt(SphP[target].Rot[0] * SphP[target].Rot[0] + SphP[target].Rot[1] * SphP[target].Rot[1] +
-                                              SphP[target].Rot[2] * SphP[target].Rot[2]) /
-                                         SphP[target].Density;
+                                              SphP[target].Rot[2] * SphP[target].Rot[2]) / SphP[target].get_density();
 
-                  SphP[target].DivVel /= SphP[target].Density;
+                  SphP[target].DivVel /= SphP[target].get_density();
 #else
                   SphP[target].set_velocity_gradients();
+#endif
+#ifdef PRESSURE_ENTROPY_SPH
+                  SphP[target].PressureSphDensity /= SphP[target].EntropyToInvGammaPred;
+                  SphP[target].DtPressureSphDensity = -SphP[target].DivVel * SphP[target].PressureSphDensity;
 #endif
                   SphP[target].DtHsml    = (1.0 / NUMDIMS) * SphP[target].DivVel * SphP[target].Hsml;
                   SphP[target].DtDensity = -SphP[target].DivVel * SphP[target].Density;
 
-#ifndef PRESSURE_ENTROPY_SPH
-                  SphP[target].set_thermodynamic_variables();
-#endif
-                }
-
-#ifdef PRESSURE_ENTROPY_SPH
-              if(SphP[target].EntropyToInvGammaPred > 0 && SphP[target].PressureSphDensity > 0)
-                {
-                  SphP[target].DhsmlDerivedDensityFactor *=
-                      SphP[target].Hsml / (NUMDIMS * SphP[target].Density * SphP[target].EntropyToInvGammaPred);
-                  SphP[target].DhsmlDerivedDensityFactor *= -SphP[target].DhsmlDensityFactor;
-                  SphP[target].PressureSphDensity /= SphP[target].EntropyToInvGammaPred;
-#ifdef WENDLAND_BIAS_CORRECTION /* Dehnen & Aly 2012, eq (18), (19) */
-                  SphP[target].PressureSphDensity -= get_density_bias(SphP[target].Hsml, Tp->P[target].getMass(), All.DesNumNgb);
-#endif
-                  SphP[target].DtPressureSphDensity = -SphP[target].DivVel * SphP[target].PressureSphDensity;
                   SphP[target].set_thermodynamic_variables();
                 }
-              else
-                {
-                  SphP[target].DhsmlDerivedDensityFactor = 0;
-                  SphP[target].EntropyToInvGammaPred     = 0;
-                  SphP[target].PressureSphDensity        = 0;
-                }
-
-#endif
+              
 #ifdef TIMEDEP_ART_VISC
               double dt = (Tp->P[target].getTimeBinHydro() ? (((integertime)1) << Tp->P[target].getTimeBinHydro()) : 0) *
                           All.Timebase_interval;
@@ -829,19 +827,20 @@ void sph::density_evaluate_kernel(pinfo &pdat)
           wk.cutoff(vector_length - (array_length - pdat.numngb));
         }
 
-      Vec4d mj_wk = mass_j * wk;
-
-      targetSphP->Density += horizontal_add(mj_wk);
+      targetSphP->Density            += horizontal_add(mass_j * wk); /* Density is always the vanilla SPH density */
+      targetSphP->DhsmlDensityFactor -= horizontal_add(mass_j * r * dwk);
 
 #ifdef PRESSURE_ENTROPY_SPH
       Vec4d entr_j(ngb0->EntropyToInvGammaPred, ngb1->EntropyToInvGammaPred, ngb2->EntropyToInvGammaPred, ngb3->EntropyToInvGammaPred);
-
-      targetSphP->PressureSphDensity += horizontal_add(mj_wk * entr_j);
-
-      targetSphP->DhsmlDerivedDensityFactor += horizontal_add(-mass_j * entr_j * (NUMDIMS * hinv * wk + u * dwk));
+      mass_j *= entr_j; /* In Pressure-Entropy SPH the weight is mass x EntropyToInvGamma */
 #endif
 
-      targetSphP->DhsmlDensityFactor += horizontal_add(-mass_j * (NUMDIMS * hinv * wk + u * dwk));
+      Vec4d mj_wk = mass_j * wk;
+
+#ifdef PRESSURE_ENTROPY_SPH
+      targetSphP->PressureSphDensity += horizontal_add(mj_wk);
+      targetSphP->DhsmlDerivedDensityFactor -= horizontal_add(mass_j * r * dwk);
+#endif
 
       Vec4db decision_r_gt_0 = (r > 0);
 
@@ -967,18 +966,19 @@ void sph::density_evaluate_kernel(pinfo &pdat)
       kernel_main(u, kernel.hinv3, kernel.hinv4, &kernel.wk, &kernel.dwk, COMPUTE_WK_AND_DWK);
 
       double mass_j = ngb->Mass;
-      kernel.mj_wk = (mass_j * kernel.wk);
 
-      targetSphP->Density += kernel.mj_wk;
+      targetSphP->Density            += mass_j * kernel.wk; /* Density is always the vanilla SPH density */
+      targetSphP->DhsmlDensityFactor -= mass_j * kernel.r * kernel.dwk;
 
 #ifdef PRESSURE_ENTROPY_SPH
-      targetSphP->PressureSphDensity += kernel.mj_wk * ngb->EntropyToInvGammaPred;
-      targetSphP->DhsmlDerivedDensityFactor +=
-          (-mass_j * ngb->EntropyToInvGammaPred * (NUMDIMS * kernel.hinv * kernel.wk + u * kernel.dwk));
-
+      mass_j *= ngb->EntropyToInvGammaPred; /* In Pressure-Entropy SPH the weight is mass x EntropyToInvGamma */
 #endif
+      kernel.mj_wk = (mass_j * kernel.wk);
 
-      targetSphP->DhsmlDensityFactor += (-mass_j * (NUMDIMS * kernel.hinv * kernel.wk + u * kernel.dwk));
+#ifdef PRESSURE_ENTROPY_SPH
+      targetSphP->PressureSphDensity += kernel.mj_wk;
+      targetSphP->DhsmlDerivedDensityFactor -= mass_j * kernel.r * kernel.dwk;
+#endif 
 
       if(kernel.r > 0)
         {

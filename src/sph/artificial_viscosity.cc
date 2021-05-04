@@ -29,7 +29,7 @@ void sph_particle_data::set_velocity_gradients(void)
     }
   else
     {
-      DivVel = dvel[0][0] / Density;
+      DivVel = dvel[0][0] / get_density();
     }
 #elif defined(TWODIMS)
   double det = dpos.dx_dx * dpos.dy_dy - dpos.dx_dy * dpos.dx_dy;
@@ -54,8 +54,8 @@ void sph_particle_data::set_velocity_gradients(void)
     }
   else
     {
-      DivVel  = (dvel[0][0] + dvel[1][1]) / Density;
-      CurlVel = fabs((dvel[1][0] - dvel[0][1]) / Density);
+      DivVel  = (dvel[0][0] + dvel[1][1]) / get_density();
+      CurlVel = fabs((dvel[1][0] - dvel[0][1]) / get_density());
     }
 #else
   gsl_matrix* distance_matrix = gsl_matrix_alloc(3, 3);
@@ -122,10 +122,10 @@ void sph_particle_data::set_velocity_gradients(void)
     }
   else
     {
-      DivVel  = (dvel[0][0] + dvel[1][1] + dvel[2][2]) / Density;
-      Rot[0]  = (dvel[2][1] - dvel[1][2]) / Density;
-      Rot[1]  = (dvel[0][2] - dvel[2][0]) / Density;
-      Rot[2]  = (dvel[1][0] - dvel[0][1]) / Density;
+      DivVel  = (dvel[0][0] + dvel[1][1] + dvel[2][2]) / get_density();
+      Rot[0]  = (dvel[2][1] - dvel[1][2]) / get_density();
+      Rot[1]  = (dvel[0][2] - dvel[2][0]) / get_density();
+      Rot[2]  = (dvel[1][0] - dvel[0][1]) / get_density();
       CurlVel = sqrt(Rot[0] * Rot[0] + Rot[1] * Rot[1] + Rot[2] * Rot[2]);
     }
 

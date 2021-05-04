@@ -447,7 +447,7 @@ void sph::hydro_forces_determine(int ntarget, int *targetlist)
     {
       int target = targetlist[i];
 
-      double fac = GAMMA_MINUS1 / (All.cf_atime2_hubble_a * pow(Tp->SphP[target].Density, GAMMA_MINUS1));
+      double fac = GAMMA_MINUS1 / (All.cf_atime2_hubble_a * pow(Tp->SphP[target].get_density(), GAMMA_MINUS1));
 
       Tp->SphP[target].DtEntropy *= fac;
     }
@@ -541,13 +541,9 @@ void sph::hydro_evaluate_kernel(pinfo &pdat)
   Vec4d dwnorm(NORM * shinv3);
   Vec4d dwknorm(NORM * shinv4);
 
-  Vec4d rho_i(SphP_i->Density);
+  Vec4d rho_i(SphP_i->get_density());
 
-#ifdef PRESSURE_ENTROPY_SPH
-  Vec4d p_over_rho2_i((double)SphP_i->Pressure / ((double)SphP_i->PressureSphDensity * (double)SphP_i->PressureSphDensity));
-#else
-  Vec4d p_over_rho2_i((double)SphP_i->Pressure / ((double)SphP_i->Density * (double)SphP_i->Density));
-#endif
+  Vec4d p_over_rho2_i((double)SphP_i->Pressure / ((double)SphP_i->get_density() * (double)SphP_i->get_density()));
 
   Vec4d sound_i(SphP_i->Csnd);
   Vec4d h_i(SphP_i->Hsml);
@@ -557,10 +553,11 @@ void sph::hydro_evaluate_kernel(pinfo &pdat)
     {
       v_i[i] = SphP_i->VelPred[i];
     }
+#ifndef PRESSURE_ENTROPY_SPH
   Vec4d DhsmlDensityFactor_i(SphP_i->DhsmlDensityFactor);
-#ifdef PRESSURE_ENTROPY_SPH
-  Vec4d DhsmlDerivedDensityFactor_i(SphP_i->DhsmlDerivedDensityFactor);
+#else
   Vec4d EntropyToInvGammaPred_i(SphP_i->EntropyToInvGammaPred);
+  Vec4d DhsmlDerivedDensityFactor_i(SphP_i->DhsmlDerivedDensityFactor);
 #endif
 
 #if !defined(NO_SHEAR_VISCOSITY_LIMITER) && !defined(TIMEDEP_ART_VISC)
@@ -623,13 +620,8 @@ void sph::hydro_evaluate_kernel(pinfo &pdat)
         }
 
       Vec4d pressure(ngb0->Pressure, ngb1->Pressure, ngb2->Pressure, ngb3->Pressure);
-      Vec4d rho_j(ngb0->Density, ngb1->Density, ngb2->Density, ngb3->Density);
-#ifdef PRESSURE_ENTROPY_SPH
-      Vec4d rho_press_j(ngb0->PressureSphDensity, ngb1->PressureSphDensity, ngb2->PressureSphDensity, ngb3->PressureSphDensity);
-      Vec4d p_over_rho2_j = pressure / (rho_press_j * rho_press_j);
-#else
+      Vec4d rho_j(ngb0->get_density(), ngb1->get_density(), ngb2->get_density(), ngb3->get_density());
       Vec4d p_over_rho2_j = pressure / (rho_j * rho_j);
-#endif
 
       Vec4d wk_i, dwk_i;
       Vec4d u = r * hinv;
@@ -744,32 +736,26 @@ void sph::hydro_evaluate_kernel(pinfo &pdat)
 
       Vec4d hfc_visc = mass_j * visc * dwk_ij / r * viscosity_fac;
 
-#ifndef PRESSURE_ENTROPY_SPH
       /* Formulation derived from the Lagrangian */
+#ifndef PRESSURE_ENTROPY_SPH
       dwk_i *= DhsmlDensityFactor_i;
       Vec4d DhsmlDensityFactor_j(ngb0->DhsmlDensityFactor, ngb1->DhsmlDensityFactor, ngb2->DhsmlDensityFactor,
                                  ngb3->DhsmlDensityFactor);
-      dwk_j *= DhsmlDensityFactor_j;
+      dwk_j *= DhsmlDensityFactor_j;  
 
-      Vec4d hfc = mass_j * (p_over_rho2_i * dwk_i + p_over_rho2_j * dwk_j) / r + hfc_visc;
 #else
       Vec4d EntropyToInvGammaPred_j(ngb0->EntropyToInvGammaPred, ngb1->EntropyToInvGammaPred, ngb2->EntropyToInvGammaPred,
                                     ngb3->EntropyToInvGammaPred);
-      Vec4d DhsmlDerivedDensityFactor_j(ngb0->DhsmlDerivedDensityFactor, ngb1->DhsmlDerivedDensityFactor,
+      Vec4d DhsmlDerivedDensityFactor_j(ngb0->DhsmlDerivedDensityFactor, ngb1->DhsmlDerivedDensityFactor, 
                                         ngb2->DhsmlDerivedDensityFactor, ngb3->DhsmlDerivedDensityFactor);
-      /* leading order term */
-      Vec4d hfc = mass_j *
-                  (p_over_rho2_i * dwk_i * EntropyToInvGammaPred_j / EntropyToInvGammaPred_i +
-                   p_over_rho2_j * dwk_j * EntropyToInvGammaPred_i / EntropyToInvGammaPred_j) /
-                  r;
-
-      /* grad-h term */
-      hfc += mass_j *
-             (p_over_rho2_i * dwk_i * SphP_i->DhsmlDerivedDensityFactor + p_over_rho2_j * dwk_j * DhsmlDerivedDensityFactor_j) / r;
-
-      /* add viscous term */
-      hfc += hfc_visc;
+      Vec4d f_ij = EntropyToInvGammaPred_j / EntropyToInvGammaPred_i + DhsmlDerivedDensityFactor_i;
+      Vec4d f_ji = EntropyToInvGammaPred_i / EntropyToInvGammaPred_j + DhsmlDerivedDensityFactor_j;
+      /* Eq. (21) Hopkins 2018 */
+      dwk_i *= f_ij;
+      dwk_j *= f_ji;
 #endif
+      
+      Vec4d hfc = mass_j * (p_over_rho2_i * dwk_i + p_over_rho2_j * dwk_j) / r + hfc_visc;
 
       for(int i = 0; i < NUMDIMS; i++)
         {
@@ -807,11 +793,7 @@ void sph::hydro_evaluate_kernel(pinfo &pdat)
   if(P_i->getTimeBinHydro() > All.HighestSynchronizedTimeBin)
     Terminate("bummer");
 
-#ifdef PRESSURE_ENTROPY_SPH
-  double p_over_rho2_i = (double)SphP_i->Pressure / ((double)SphP_i->PressureSphDensity * (double)SphP_i->PressureSphDensity);
-#else
-  double p_over_rho2_i = (double)SphP_i->Pressure / ((double)SphP_i->Density * (double)SphP_i->Density);
-#endif
+  double p_over_rho2_i = (double)SphP_i->Pressure / ((double)SphP_i->get_density() * (double)SphP_i->get_density());
 
   kernel_hydra kernel;
 
@@ -847,12 +829,7 @@ void sph::hydro_evaluate_kernel(pinfo &pdat)
           kernel.r = sqrt(r2);
           if(kernel.r > 0)
             {
-#ifdef PRESSURE_ENTROPY_SPH
-              double p_over_rho2_j =
-                  (double)SphP_j->Pressure / ((double)SphP_j->PressureSphDensity * (double)SphP_j->PressureSphDensity);
-#else
-              double p_over_rho2_j = (double)SphP_j->Pressure / ((double)SphP_j->Density * (double)SphP_j->Density);
-#endif
+              double p_over_rho2_j = (double)SphP_j->Pressure / ((double)SphP_j->get_density() * (double)SphP_j->get_density());
 
               kernel.sound_j = SphP_j->Csnd;
 
@@ -860,7 +837,7 @@ void sph::hydro_evaluate_kernel(pinfo &pdat)
               kernel.dvy        = SphP_i->VelPred[1] - SphP_j->VelPred[1];
               kernel.dvz        = SphP_i->VelPred[2] - SphP_j->VelPred[2];
               kernel.vdotr2     = kernel.dx * kernel.dvx + kernel.dy * kernel.dvy + kernel.dz * kernel.dvz;
-              kernel.rho_ij_inv = 2.0 / (SphP_i->Density + SphP_j->Density);
+              kernel.rho_ij_inv = 2.0 / (SphP_i->get_density() + SphP_j->get_density());
 
               if(All.ComovingIntegrationOn)
                 kernel.vdotr2 += All.cf_atime2_hubble_a * r2;
@@ -939,28 +916,18 @@ void sph::hydro_evaluate_kernel(pinfo &pdat)
 
               double hfc_visc = P_j->Mass * visc * kernel.dwk_ij / kernel.r;
 
-#ifndef PRESSURE_ENTROPY_SPH
               /* Formulation derived from the Lagrangian */
+#ifndef PRESSURE_ENTROPY_SPH      
               kernel.dwk_i *= SphP_i->DhsmlDensityFactor;
               kernel.dwk_j *= SphP_j->DhsmlDensityFactor;
-
-              double hfc = P_j->Mass * (p_over_rho2_i * kernel.dwk_i + p_over_rho2_j * kernel.dwk_j) / kernel.r + hfc_visc;
 #else
-              /* leading order term */
-              double hfc = P_j->Mass *
-                           (p_over_rho2_i * kernel.dwk_i * SphP_j->EntropyToInvGammaPred / SphP_i->EntropyToInvGammaPred +
-                            p_over_rho2_j * kernel.dwk_j * SphP_i->EntropyToInvGammaPred / SphP_j->EntropyToInvGammaPred) /
-                           kernel.r;
-
-              /* grad-h term */
-              hfc += P_j->Mass *
-                     (p_over_rho2_i * kernel.dwk_i * SphP_i->DhsmlDerivedDensityFactor +
-                      p_over_rho2_j * kernel.dwk_j * SphP_j->DhsmlDerivedDensityFactor) /
-                     kernel.r;
-
-              /* add viscous term */
-              hfc += hfc_visc;
+              double f_ij = SphP_j->EntropyToInvGammaPred / SphP_i->EntropyToInvGammaPred + SphP_i->DhsmlDerivedDensityFactor;
+              double f_ji = SphP_i->EntropyToInvGammaPred / SphP_j->EntropyToInvGammaPred + SphP_j->DhsmlDerivedDensityFactor;
+              /* Eq. (20) Hopkins 2018 */
+              kernel.dwk_i *= f_ij;
+              kernel.dwk_j *= f_ji;
 #endif
+              double hfc = P_j->Mass * (p_over_rho2_i * kernel.dwk_i + p_over_rho2_j * kernel.dwk_j) / kernel.r + hfc_visc;
 
               daccx += (-hfc * kernel.dx);
               daccy += (-hfc * kernel.dy);
