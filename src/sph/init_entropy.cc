@@ -33,7 +33,7 @@
 
 #ifdef PRESSURE_ENTROPY_SPH
 
-#define MAX_ITER_ENTROPY 100
+#define MAX_ITER_ENTROPY 100 //This is never used. maybe it was meant for "MAXITER" in loop in init_entropy?
 #define ENTROPY_TOLERANCE 1.0e-5
 
 /*! \file init_entropy.c
@@ -129,10 +129,13 @@ void sph::init_entropy(void)
 
               sph_particle_data *SphP = Tp->SphP;
 
-              if(SphP[target].EntropyToInvGammaPred > 0 && SphP[target].Density > 0)
+              if(SphP[target].EntropyToInvGammaPred > 0 && SphP[target].PressureSphDensity > 0)
                 {
                   entropy_old = SphP[target].Entropy;
                   SphP[target].PressureSphDensity /= SphP[target].EntropyToInvGammaPred;
+#ifdef WENDLAND_BIAS_CORRECTION
+                  SphP[target].PressureSphDensity -= get_density_bias(SphP[target].Hsml, Tp->P[target].getMass(), All.DesNumNgb);
+#endif
                   SphP[target].Entropy =
                       GAMMA_MINUS1 * SphP[target].EntropyPred / pow(SphP[target].PressureSphDensity * All.cf_a3inv, GAMMA_MINUS1);
                   SphP[target].EntropyToInvGammaPred = pow(SphP[target].Entropy, 1.0 / GAMMA);
@@ -142,7 +145,6 @@ void sph::init_entropy(void)
                   entropy_old                        = SphP[target].Entropy;
                   SphP[target].PressureSphDensity    = 0;
                   SphP[target].Entropy               = 0;
-                  SphP[target].EntropyToInvGammaPred = 0;
                 }
               /* entropy has not converged yet */
               if(fabs(entropy_old - SphP[target].Entropy) > ENTROPY_TOLERANCE * entropy_old)
