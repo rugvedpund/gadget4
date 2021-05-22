@@ -46,6 +46,16 @@ struct sph_particle_data_hydrocore
   MyFloat DhsmlDerivedDensityFactor; /*!< additional correction factor needed for pressure formulation of SPH */
   MyFloat PressureSphDensity;        /* current density derived from the pressure estimate */
 #endif
+
+  /* return the density relevant for Hydrodynamics*/
+  inline MyFloat get_density(void)
+  {
+#ifndef PRESSURE_ENTROPY_SPH
+    return Density;
+#else
+    return PressureSphDensity;
+#endif
+  }
 };
 
 /** Holds data that is stored for each sph particle in addition to
@@ -117,9 +127,10 @@ struct sph_particle_data : public sph_particle_data_hydrocore
   inline MyFloat get_sound_speed(void)
   {
     MyFloat csnd;
+    MyFloat density = get_density();
 
-    if(Density > 0)
-      csnd = sqrt(static_cast<MyReal>(GAMMA) * Pressure / Density);
+    if(density > 0)
+      csnd = sqrt(static_cast<MyReal>(GAMMA) * Pressure / density);
     else
       csnd = 0;
 
