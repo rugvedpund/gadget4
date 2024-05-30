@@ -2,8 +2,8 @@ LIB_DIR=extlibs
 
 FFTW_VERSION=3.3.4
 GSL_VERSION=1.16
-HDF5_VERSION=1.8.15-patch1
-HWLOC_VERSION=1.8.6
+HDF5_VERSION=1.14.4-2
+HWLOC_VERSION=2.9.3
 
 libs: gsl fftw-single fftw-double hdf5 hwloc
 
@@ -51,7 +51,7 @@ $(LIB_DIR)/include/gsl/: | $(LIB_DIR)/gsl-$(GSL_VERSION)/
 hwloc: $(LIB_DIR)/include/hwloc.h
 
 $(LIB_DIR)/hwloc-$(HWLOC_VERSION).tar.gz: | $(LIB_DIR)
-	cd $(LIB_DIR); wget  http://www.open-mpi.de/software/hwloc/v1.8/downloads/hwloc-$(HWLOC_VERSION).tar.gz
+	cd $(LIB_DIR); wget  https://download.open-mpi.org/release/hwloc/v2.9/hwloc-$(HWLOC_VERSION).tar.gz
 
 $(LIB_DIR)/hwloc-$(HWLOC_VERSION)/:	$(LIB_DIR)/hwloc-$(HWLOC_VERSION).tar.gz
 	cd $(LIB_DIR); tar -xf hwloc-$(HWLOC_VERSION).tar.gz
@@ -65,7 +65,7 @@ $(LIB_DIR)/include/hwloc.h: | $(LIB_DIR)/hwloc-$(HWLOC_VERSION)/
 hdf5: $(LIB_DIR)/include/hdf5.h
 
 $(LIB_DIR)/hdf5-$(HDF5_VERSION).tar.gz: | $(LIB_DIR)
-	cd $(LIB_DIR); wget ftp://ftp.hdfgroup.org/HDF5/current/src/hdf5-$(HDF5_VERSION).tar.gz
+	cd $(LIB_DIR); wget https://github.com/HDFGroup/hdf5/releases/download/hdf5_1.14.4.2/hdf5-$(HDF5_VERSION).tar.gz
 	
 $(LIB_DIR)/hdf5-$(HDF5_VERSION): $(LIB_DIR)/hdf5-$(HDF5_VERSION).tar.gz
 	cd $(LIB_DIR); tar -xf hdf5-$(HDF5_VERSION).tar.gz
