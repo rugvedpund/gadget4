@@ -202,6 +202,10 @@ include buildsystem/Makefile.comp.gcc
 include buildsystem/Makefile.path.bwforcluster
 endif
 
+ifeq ($(SYSTYPE),"BNL-gcc")
+include buildsystem/Makefile.bnl.libs
+include buildsystem/Makefile.comp.gcc
+endif
 
 ifndef LINKER
 LINKER = $(CPP)
