@@ -4,7 +4,6 @@
 # system. Don't commit changes to this file unless you add support for
 # a new system.
 
-SYSTYPE="BNL-gcc"
 #SYSTYPE="Generic-gcc"
 #SYSTYPE="Generic-intel"
 #SYSTYPE="Generic-gcc-single"
