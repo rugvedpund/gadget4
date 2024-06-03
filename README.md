@@ -47,7 +47,7 @@ This is how I got it to compile since the default modules are outdated.
    Follow instructions and ensure ```conda info``` makes sense. You might need to ```source ~/.bashrc``` here.
 1. Create a new env for gadget and install dependencies
    ```bash
-   conda create -n gadget conda python=3.9 mpich-mpicxx gsl fftw hdf5 libhwloc zlib
+   conda create -n gadget -c conda-forge python=3.9 mpich-mpicxx gsl fftw hdf5 libhwloc zlib
    conda activate gadget
    ```
 1. Clone this repo. It has some changes to address an older glibc on BNL astro cluster
@@ -57,16 +57,11 @@ This is how I got it to compile since the default modules are outdated.
 1. We can now try compiling. This is just a test compile to check if everything works.
    ```bash
    cd gadget4/
-   make
+   make DIR=examples/test
    ```
-1. Now we can try an example from examples/DM-L50-N128. Ensure that the included Config.sh has the flag OLDSTYLE_SHARED_MEMORY_ALLOCATION
-   ```bash
-   make DIR=examples/DM-L50-N128
-   ```
-   This should compile and create a new executable `examples/DM-L50-N128/Gadget4` inside the folder. 
 1. We can now run the executable with the included params.txt
    ```bash
-   cd examples/DM-L50-N128
+   cd examples/test
    ./Gadget4 params.txt 0
    ```
-   If all goes well, we should have output.
+   If all goes well, GADGET should start computing (on the login node, which is not ideal). Interrupt the program with `Ctrl+C`, we will run it on the compute nodes with Condor.
