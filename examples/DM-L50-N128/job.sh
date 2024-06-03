@@ -1,18 +1,20 @@
 #!/bin/bash -l
-##SBATCH --mail-type=BEGIN,END,FAIL
-##SBATCH --mail-user=harry.potter@hogwarts.edu
-#SBATCH --time=24:00:00
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=40
-#SBATCH --job-name DM-L50-N128
 
+if [[ -n $_CONDOR_SCRATCH_DIR ]]; then
+    # the condor system creates a scratch directory for us,
+    # and cleans up afterward
+    echo "using condor scratch at $_CONDOR_SCRATCH_DIR"
+    tmpdir=$_CONDOR_SCRATCH_DIR
+    export TMPDIR=$tmpdir
+else
+    # otherwise use the TMPDIR
+    echo "using my tmp dir at $TMPDIR"
+    tmpdir=$TMPDIR
+fi
 
 echo
-echo "Running on hosts: $SLURM_NODELIST"
-echo "Running on $SLURM_NNODES nodes."
-echo "Running on $SLURM_NPROCS processors."
 echo "Current working directory is `pwd`"
 echo
 
-mpiexec -np $SLURM_NPROCS  ./Gadget4 param.txt 
+mpiexec -np 16 ./Gadget4 param.txt 1
 

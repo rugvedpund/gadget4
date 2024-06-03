@@ -1,0 +1,31 @@
+# -------------------------------------------------------------
+# DO NOT CHANGE
+Universe        = vanilla
+kill_sig        = SIGINT
++Experiment     = "astro"
+GetEnv          = True
+# -------------------------------------------------------------
+
+# -------------------------------------------------------------
+# Change these for your job..
+
+notification    = Always
+notify_user     = rugved.pund@stonybrook.edu
+
+# this restricts the jobs to use the the shared pool
+# Do this if your job will exceed 2 hours
+requirements    = (cpu_experiment == "sdcc")
+
+request_memory     = 8 GB
+# Image_Size       =  1000000 # not sure if this is needed
+
+# each time the Queue command is called, it makes a new job
+# and sends the last specified arguments. job_name will show
+# up if you use the condortop job viewer
++job_name       = "gadget-001"
+executable      = /gpfs02/astro/workarea/rugvedpund/files/gadget4/examples/DM-L50-N128/job.sh
+log             = condor.log
+error           = condor.err
+output          = condor.out
+
+Queue
