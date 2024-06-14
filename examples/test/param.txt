@@ -1,7 +1,17 @@
+%----- N-GenIC
+NSample                                           128
+GridSize                                          128
+%---- Cosmological parameters
+BoxSize                   250.0
+%----- Memory alloction
+MaxMemSize                600    % in MByte
+%---- Caracteristics of run
+TimeBegin                 0.015625   % Begin of the simulation, z = 63
+TimeMax	                  1.0        % End of the simulation,   z = 0
 
 %----  Relevant files 
-InitCondFile         ./dummy.dat       % we will here create the ICs upon startup
-OutputDir            ./output
+InitCondFile         dummy.dat       % we will here create the ICs upon startup
+OutputDir            ./L250_N128
 SnapshotFileBase     snapshot
 OutputListFilename   outputs.txt
 
@@ -11,15 +21,10 @@ ICFormat             1
 SnapFormat           3 
 
 %---- CPU-time limits
-TimeLimitCPU              86400   % 24h, in seconds
-CpuTimeBetRestartFile     7200    % 2h,  in seconds
+TimeLimitCPU              14400   % in seconds
+CpuTimeBetRestartFile     7200    % in seconds
 
-%----- Memory alloction
-MaxMemSize                1800    % in MByte
 
-%---- Caracteristics of run
-TimeBegin                 0.015625   % Begin of the simulation, z = 63
-TimeMax	                  1.0        % End of the simulation,   z = 0
 
 %---- Basic code options that set the type of simulation
 ComovingIntegrationOn     1 
@@ -30,7 +35,6 @@ OmegaLambda               0.692
 OmegaBaryon               0.0482
 HubbleParam               0.678
 Hubble                    100.0
-BoxSize                   50.0
 
 %---- Output frequency and output paramaters
 OutputListOn              1 
@@ -82,8 +86,6 @@ InitGasTemp                  0
 
 
 %----- N-GenIC
-NSample                                           128
-GridSize                                          128
 Seed                                              181170
 SphereMode                                        1
 PowerSpectrumType                                 0
