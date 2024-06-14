@@ -1,20 +1,20 @@
 %----- N-GenIC
-NSample                                           128
-GridSize                                          128
+NSample     128
+GridSize    128
 %---- Cosmological parameters
-BoxSize                   250.0
+BoxSize     250.0
 %----- Memory alloction
-MaxMemSize                600    % in MByte
+MaxMemSize  600    % in MByte
 %---- Caracteristics of run
-TimeBegin                 0.015625   % Begin of the simulation, z = 63
-TimeMax	                  1.0        % End of the simulation,   z = 0
-
+TimeBegin   0.015625   % Begin of the simulation, z = 63
+TimeMax	    1.0        % End of the simulation,   z = 0
 %----  Relevant files 
 InitCondFile         dummy.dat       % we will here create the ICs upon startup
 OutputDir            ./L250_N128
 SnapshotFileBase     snapshot
 OutputListFilename   outputs.txt
 
+%------------------------------------------------------------------------------
 
 %---- File formats
 ICFormat             1
@@ -23,8 +23,6 @@ SnapFormat           3
 %---- CPU-time limits
 TimeLimitCPU              14400   % in seconds
 CpuTimeBetRestartFile     7200    % in seconds
-
-
 
 %---- Basic code options that set the type of simulation
 ComovingIntegrationOn     1 
@@ -70,7 +68,6 @@ UnitMass_in_g            1.989e43           ;  1.0e10 Msun / h
 UnitVelocity_in_cm_per_s 1e5                ;  1 km/sec
 GravityConstantInternal  0
 
-
 %---- Gravitational softening length
 SofteningComovingClass0      0.01           ; 10 kpc/h
 SofteningMaxPhysClass0       0.01
@@ -78,12 +75,10 @@ SofteningMaxPhysClass0       0.01
 SofteningClassOfPartType0    0
 SofteningClassOfPartType1    0
 
-
 %----- SPH
 ArtBulkViscConst             1.0
 MinEgySpec                   0
 InitGasTemp                  0
-
 
 %----- N-GenIC
 Seed                                              181170
@@ -95,4 +90,3 @@ ShapeGamma                                        0.21
 Sigma8                                            0.9
 PowerSpectrumFile                                 powerspec
 InputSpectrum_UnitLength_in_cm                    3.085678e21
-

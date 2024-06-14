@@ -1,3 +1,6 @@
+# For BNL's old system
+
+    OLDSTYLE_SHARED_MEMORY_ALLOCATION
 
 # Basic code operation
 
@@ -38,7 +41,4 @@
     CREATE_GRID
     IDS_32BIT
 
-# MPI related
-
-    OLDSTYLE_SHARED_MEMORY_ALLOCATION
 

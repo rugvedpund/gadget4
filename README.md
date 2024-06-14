@@ -59,9 +59,10 @@ This is how I got it to compile since the default modules are outdated.
    cd gadget4/
    make DIR=examples/test
    ```
-1. We can now run the executable with the included params.txt
+   Note that this directory is a copy of the official examples/DM-L50-N128, except the Config.sh file has an extra `OLDSTYLE_SHARED_MEMORY_ALLOCATION` flag. The Config.sh file should not be modified after compiling. If a different Config.sh is needed, it is recommended to create a new directory with the newConfig.sh and run make in that dir. For more details on the recommended practices, refer to the [code's web-site](https://wwwmpa.mpa-garching.mpg.de/gadget4).
+1. We can now run the executable with the included params.txt (and outputs.txt, which is called internally for saving snapshots). We will run this directly on the login node for now.
    ```bash
    cd examples/test
-   ./Gadget4 params.txt 0
+   mpiexec -np 8 ./Gadget4 params.txt 0
    ```
-   If all goes well, GADGET should start computing (on the login node, which is not ideal). Interrupt the program with `Ctrl+C`, we will run it on the compute nodes with Condor.
+   Note that the params.txt can be modified and the code can be rerun, just ensure that the output of any previous runs is cleared. The code will save a copy of the params.txt as parameters-usedvalues with every output for later reference. 
